@@ -94,6 +94,53 @@ public abstract class ShareIntent {
 
         return Intent.createChooser(prototype, "Share");
     }
+    
+    public Intent onlyChooserIntent(Intent prototype, ReadableMap options) {
+        List<Intent> targetedShareIntents = new ArrayList<Intent>();
+        List<HashMap<String, String>> intentMetaInfo = new ArrayList<HashMap<String, String>>();
+        Intent chooserIntent;
+
+        Intent dummy = new Intent(prototype.getAction());
+        dummy.setType(prototype.getType());
+        List<ResolveInfo> resInfo = this.reactContext.getPackageManager().queryIntentActivities(dummy, 0);
+
+        if (!resInfo.isEmpty()) {
+            for (ResolveInfo resolveInfo : resInfo) {
+                if (resolveInfo.activityInfo == null || !options.getArray("exclusiveActivityTypes").toString().contains(resolveInfo.activityInfo.packageName))
+                    continue;
+
+                HashMap<String, String> info = new HashMap<String, String>();
+                info.put("packageName", resolveInfo.activityInfo.packageName);
+                info.put("className", resolveInfo.activityInfo.name);
+                info.put("simpleName", String.valueOf(resolveInfo.activityInfo.loadLabel(this.reactContext.getPackageManager())));
+                intentMetaInfo.add(info);
+            }
+
+            if (!intentMetaInfo.isEmpty()) {
+                // sorting for nice readability
+                Collections.sort(intentMetaInfo, new Comparator<HashMap<String, String>>() {
+                    @Override
+                    public int compare(HashMap<String, String> map, HashMap<String, String> map2) {
+                        return map.get("simpleName").compareTo(map2.get("simpleName"));
+                    }
+                });
+
+                // create the custom intent list
+                for (HashMap<String, String> metaInfo : intentMetaInfo) {
+                    Intent targetedShareIntent = (Intent) prototype.clone();
+                    targetedShareIntent.setPackage(metaInfo.get("packageName"));
+                    targetedShareIntent.setClassName(metaInfo.get("packageName"), metaInfo.get("className"));
+                    targetedShareIntents.add(targetedShareIntent);
+                }
+
+                chooserIntent = Intent.createChooser(targetedShareIntents.remove(targetedShareIntents.size() - 1), "share");
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetedShareIntents.toArray(new Parcelable[]{}));
+                return chooserIntent;
+            }
+        }
+
+        return Intent.createChooser(prototype, "Share");
+    }
 
     public void open(ReadableMap options) throws ActivityNotFoundException {
         this.options = options;
@@ -275,6 +322,17 @@ public abstract class ShareIntent {
             chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, viewIntents);
         }
 
+        if (ShareIntent.hasValidKey("exclusiveActivityTypes", options)) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, getExclusiveComponentArray(options.getArray("exclusiveActivityTypes")));
+                activity.startActivityForResult(chooser, RNShareModule.SHARE_REQUEST_CODE);
+            } else {
+                activity.startActivityForResult(onlyChooserIntent(this.getIntent(),options), RNShareModule.SHARE_REQUEST_CODE);
+            }
+        } else {
+            activity.startActivityForResult(chooser, RNShareModule.SHARE_REQUEST_CODE);
+        }
+
         if (ShareIntent.hasValidKey("excludedActivityTypes", options)) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
                 chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, getExcludedComponentArray(options.getArray("excludedActivityTypes")));
@@ -335,6 +393,25 @@ public abstract class ShareIntent {
             String packageName = excludeActivityTypes.getString(index);
             for(ResolveInfo resInfo : resInfoList) {
                 if(resInfo.activityInfo.packageName.equals(packageName)) {
+                    componentNameList.add(new ComponentName(resInfo.activityInfo.packageName, resInfo.activityInfo.name));
+                }
+            }
+        }
+        return componentNameList.toArray(new ComponentName[]{});
+    }
+
+    private ComponentName[] getExclusiveComponentArray(ReadableArray excludeActivityTypes){
+        if (excludeActivityTypes == null){
+            return null;
+        }
+        Intent dummy = new Intent(getIntent().getAction());
+        dummy.setType(getIntent().getType());
+        List<ComponentName> componentNameList = new ArrayList<>();
+        List<ResolveInfo> resInfoList = this.reactContext.getPackageManager().queryIntentActivities(dummy, 0);
+        for (int index = 0; index < excludeActivityTypes.size(); index++) {
+            String packageName = excludeActivityTypes.getString(index);
+            for(ResolveInfo resInfo : resInfoList) {
+                if(!resInfo.activityInfo.packageName.equals(packageName)) {
                     componentNameList.add(new ComponentName(resInfo.activityInfo.packageName, resInfo.activityInfo.name));
                 }
             }
