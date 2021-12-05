@@ -25,20 +25,13 @@ const RNShare = {
   Social: {
     FACEBOOK: NativeModules.RNShare.FACEBOOK || Social.Facebook,
     FACEBOOK_STORIES: NativeModules.RNShare.FACEBOOKSTORIES || Social.FacebookStories,
-    PAGESMANAGER: NativeModules.RNShare.PAGESMANAGER || Social.Pagesmanager,
     TWITTER: NativeModules.RNShare.TWITTER || Social.Twitter,
     WHATSAPP: NativeModules.RNShare.WHATSAPP || Social.Whatsapp,
-    WHATSAPPBUSINESS: NativeModules.RNShare.WHATSAPPBUSINESS || Social.Whatsappbusiness,
     INSTAGRAM: NativeModules.RNShare.INSTAGRAM || Social.Instagram,
     INSTAGRAM_STORIES: NativeModules.RNShare.INSTAGRAMSTORIES || Social.InstagramStories,
     GOOGLEPLUS: NativeModules.RNShare.GOOGLEPLUS || Social.Googleplus,
     EMAIL: NativeModules.RNShare.EMAIL || Social.Email,
-    PINTEREST: NativeModules.RNShare.PINTEREST || Social.Pinterest,
-    LINKEDIN: NativeModules.RNShare.LINKEDIN || Social.Linkedin,
-    SMS: NativeModules.RNShare.SMS || Social.Sms,
     TELEGRAM: NativeModules.RNShare.TELEGRAM || Social.Telegram,
-    MESSENGER: NativeModules.RNShare.MESSENGER || Social.Messenger,
-    SNAPCHAT: NativeModules.RNShare.SNAPCHAT || Social.Snapchat,
   },
 
   open(options: ShareOptions): Promise<ShareOpenResult | never> {
